@@ -71,6 +71,9 @@ void UDiscordRpc::Initialize( const FString& _ApplicationId, const FString& _Sta
 }
 
 void UDiscordRpc::UpdateActivity( const FString& _State, const FString& _Details ) {
+	if ( !Core ) {
+		return;
+	}
 	discord::Activity activity{};
 	activity.SetApplicationId( AppValue );
 	activity.SetState(TCHAR_TO_ANSI( *_State));
@@ -91,7 +94,9 @@ void UDiscordRpc::VirtualBeginPlay() {
 }
 
 void UDiscordRpc::VirtualTickObject() {
-	Core->RunCallbacks();
+	if ( Core ) {
+		Core->RunCallbacks();
+	}
 }
 
 void UDiscordRpc::VirtualEndPlay() {
@@ -99,5 +104,9 @@ void UDiscordRpc::VirtualEndPlay() {
 }
 
 void UDiscordRpc::Shutdown() {
-	Core = nullptr;
+	if ( Core ) {
+		Core->ActivityManager().ClearActivity( []( discord::Result ) {} );
+		Core->~Core();
+		Core = nullptr;
+	}
 }
