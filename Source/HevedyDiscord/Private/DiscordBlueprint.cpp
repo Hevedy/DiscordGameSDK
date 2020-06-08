@@ -27,84 +27,58 @@ SOFTWARE.
 
 #include "DiscordBlueprint.h"
 #include "discord.h"
-
-DEFINE_LOG_CATEGORY(Discord)
-
 #include <iostream>
 #include <sstream>
 
-static discord::Core* Core{};
+DEFINE_LOG_CATEGORY_STATIC( LogDiscord, All, All )
 
-static discord::ActivityManager* ActivityManager{};
-
-static discord::User User;
-
+static discord::Core* Core = nullptr;
 static uint64_t AppValue;
 
-struct DiscordState {
-	discord::User user;
-
-	std::unique_ptr<discord::Core> core;
-};
-
-void UDiscordRpc::Initialize( const FString& _ApplicationId, const FString& _State, const FString& _Details ) {
-	std::string inStr = TCHAR_TO_UTF8( *_ApplicationId );
-	uint64_t value;
-	char* end;
-	value = strtoull( inStr.c_str(), &end, 10 );
-	AppValue = value;
-
-	DiscordState state{};
-
-	
-	discord::Core* core{};
-	auto result = discord::Core::Create( AppValue, DiscordCreateFlags_NoRequireDiscord, &core);
-	Core = core;
-	if ( !Core ) {
-		UE_LOG( Discord, Log, TEXT( "Discord Failed at create core" ) );
-	} else {
-		UE_LOG( Discord, Log, TEXT( "Discord Created Core" ) );
+bool UDiscordRpc::Initialize( int64 _ClientID, bool _DiscordRequired ) {
+	discord::Result result = discord::Core::Create( _ClientID, _DiscordRequired ? DiscordCreateFlags_Default : DiscordCreateFlags_NoRequireDiscord, &Core );
+	if ( result != discord::Result::Ok || Core == nullptr ) {
+		UE_LOG( LogDiscord, Error, TEXT( "Failed to create Discord Core" ) );
+		return false;
 	}
 
-	UpdateActivity( _State, _Details );
-
+	return true;
 }
 
-void UDiscordRpc::UpdateActivity( const FString& _State, const FString& _Details ) {
+bool UDiscordRpc::UpdatePlayActivity( const FString& _State, const FString& _Details, const FString& _Image ) {
 	if ( !Core ) {
-		return;
+		UE_LOG( LogDiscord, Warning, TEXT( "Discord Activity Core Fail" ) );
+		return false;
 	}
+
 	discord::Activity activity{};
-	activity.SetApplicationId( AppValue );
-	activity.SetState(TCHAR_TO_ANSI( *_State));
-	activity.SetDetails(TCHAR_TO_ANSI( *_Details));
 	activity.SetType( discord::ActivityType::Playing );
-
-    Core->ActivityManager().UpdateActivity(activity, [](discord::Result result) {
-		if ( result == discord::Result::Ok ) {
-			UE_LOG( Discord, Log, TEXT( "Discord Activity Set" ) );
-		} else {
-			UE_LOG( Discord, Log, TEXT( "Discord Activity Fail" ) );
+	activity.SetState( TCHAR_TO_ANSI( *_State ) );
+	activity.SetDetails( TCHAR_TO_ANSI( *_Details ) );
+	activity.GetAssets().SetLargeImage( TCHAR_TO_ANSI( *_Image ) );
+	activity.SetInstance( true );
+	Core->ActivityManager().UpdateActivity( activity, []( discord::Result result ) {
+		if ( result != discord::Result::Ok ) {
+			UE_LOG( LogDiscord, Warning, TEXT( "Discord Activity Fail" ) );
+			return;
 		}
-    });
+
+		UE_LOG( LogDiscord, Log, TEXT( "Discord Activity Set" ) );
+	} );
+
+	return true;
 }
 
-void UDiscordRpc::VirtualBeginPlay() {
-	
-}
+bool UDiscordRpc::RunCallbacks() {
+	if ( Core )
+		return Core->RunCallbacks() == discord::Result::Ok;
 
-void UDiscordRpc::VirtualTickObject() {
-	if ( Core ) {
-		Core->RunCallbacks();
-	}
-}
-
-void UDiscordRpc::VirtualEndPlay() {
-	
+	return false;
 }
 
 void UDiscordRpc::Shutdown() {
 	if ( Core ) {
+		UE_LOG( LogDiscord, Warning, TEXT( "Discord Shutdown" ) );
 		Core->ActivityManager().ClearActivity( []( discord::Result ) {} );
 		Core->~Core();
 		Core = nullptr;

@@ -31,35 +31,23 @@ SOFTWARE.
 #include "Engine.h"
 #include "DiscordBlueprint.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(Discord, Log, All);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDiscordConnected);
-
-
-UCLASS(BlueprintType, meta = (DisplayName = "Discord SDK"), Category = "Discord")
-class HEVEDYDISCORD_API UDiscordRpc : public UObject {
+UCLASS()
+class HEVEDYDISCORD_API UDiscordRpc : public UBlueprintFunctionLibrary { //public UObject { //UObject
     GENERATED_BODY()
 
 public:
 
-    UFUNCTION(BlueprintCallable, meta = ( Keywords = "Discord SDK" ), Category = "Discord")
-		void Initialize( const FString& _ApplicationId, const FString& _State, const FString& _Details );
-
-    UFUNCTION(BlueprintCallable, Category = "Discord")
-		void UpdateActivity( const FString& _State, const FString& _Details );
-
 	UFUNCTION(BlueprintCallable, Category = "Discord")
-		void VirtualBeginPlay();
-
+		static bool Initialize( int64 _ClientID, bool _DiscordRequired = false );
+	
 	UFUNCTION(BlueprintCallable, Category = "Discord")
-		void VirtualTickObject();
-
+		static bool UpdatePlayActivity( const FString& _State, const FString& _Details, const FString& _Image = "none" );
+	
 	UFUNCTION(BlueprintCallable, Category = "Discord")
-		void VirtualEndPlay();
-
-	UFUNCTION( BlueprintCallable, meta = ( Keywords = "Discord SDK" ), Category = "Discord" )
-		void Shutdown();
-
-	UPROPERTY( BlueprintReadOnly, meta = ( Keywords = "Discord SDK" ), Category = "Discord" )
-		bool IsConnected;
+		static bool RunCallbacks();
+		
+	UFUNCTION( BlueprintCallable, Category = "Discord" )
+		static void Shutdown();
+	
 };
