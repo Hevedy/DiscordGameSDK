@@ -36,7 +36,7 @@ public class HevedyDiscord : ModuleRules
         //PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PrivateIncludePaths.Add(System.IO.Path.Combine(ModuleDirectory, "Private"));
-		PrivateIncludePaths.Add(System.IO.Path.Combine(ModuleDirectory, "Thirdparty", "Discord" ));
+		//PrivateIncludePaths.Add(System.IO.Path.Combine(ModuleDirectory, "Thirdparty", "Discord" ));
 		PublicIncludePaths.Add(System.IO.Path.Combine(ModuleDirectory, "Public"));
 
         PublicDependencyModuleNames.AddRange(
